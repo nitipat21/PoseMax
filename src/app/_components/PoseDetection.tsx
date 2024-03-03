@@ -23,6 +23,9 @@ const PoseDetection = () => {
   const [detector, setDetector] = useState<PoseDetector | null>(null);
   const [idealPosture, setIdealPosture] = useState<Pose | null>(null);
   const [isBadPosture, setIsBadPosture] = useState(false);
+  const [badPostureTimeoutId, setBadPostureTimeoutId] =
+    useState<NodeJS.Timeout | null>(null);
+  const [isStartSession, setIsStartSession] = useState(false);
 
   const onSave = async () => {
     if (!detector || !video) return;
@@ -104,9 +107,9 @@ const PoseDetection = () => {
       const averageShoulderHeightIdeal =
         (leftShoulderIdeal.y + rightShoulderIdeal.y) / 2;
 
-      const HORIZONTAL_DIFFERENCE_THRESHOLD = 30;
-      const SHOULDER_LEVEL_DIFFERENCE_THRESHOLD = 15;
-      const SHOULDER_VERTICAL_THRESHOLD = 15;
+      const HORIZONTAL_DIFFERENCE_THRESHOLD = 60;
+      const SHOULDER_LEVEL_DIFFERENCE_THRESHOLD = 30;
+      const SHOULDER_VERTICAL_THRESHOLD = 30;
 
       const isShoulderHigher =
         averageShoulderHeightCurrent + SHOULDER_VERTICAL_THRESHOLD <
@@ -125,7 +128,7 @@ const PoseDetection = () => {
       if (!isShouldersLower && !isLeaningForward && !isTilting) {
         setPostureStatus("Good posture. Keep it up!");
         setIsBadPosture(false);
-        return; // Exit early if good posture
+        return;
       }
 
       setIsBadPosture(true);
@@ -241,19 +244,70 @@ const PoseDetection = () => {
   }, []);
 
   return (
-    <>
-      {loading && <div>Loading...</div>}
-      <div className={cn(loading && "hidden")}>
-        <div className="text-center">Status: {postureStatus}</div>
+    <div
+      className={cn(
+        "flex flex-col gap-6 items-center max-w-[40rem]",
+        loading && "hidden"
+      )}
+    >
+      <p className={cn("leading-7 mr-auto", idealPosture && "hidden")}>
+        Please set your ideal posture now. Position yourself in the most
+        comfortable, upright posture you believe is ideal for you. This will
+        help us compare and improve your posture over time.
+      </p>
+
+      <div className="relative">
+        <div
+          className={cn(
+            "hidden opacity-0",
+            idealPosture && "block",
+            isStartSession && "opacity-100"
+          )}
+        >
+          {isBadPosture ? (
+            <p className="text-center font-extrabold text-red-700">
+              BAD POSTURE
+            </p>
+          ) : (
+            <p className="text-center font-extrabold text-green-700">
+              GOOD POSTURE
+            </p>
+          )}
+        </div>
         <video
           ref={videoRef}
-          className="scale-x-[-1]"
+          className={cn(
+            "scale-x-[-1] rounded-2xl border-4 border-black",
+            isStartSession &&
+              (isBadPosture ? "border-red-600" : "border-green-600")
+          )}
           width={dimensions.width}
           height={dimensions.height}
         />
-        <Button onClick={onSave}>Save Ideal Posture</Button>
       </div>
-    </>
+      {idealPosture ? (
+        <div className="flex gap-4">
+          {isStartSession ? (
+            <Button onClick={() => setIsStartSession(false)}>
+              End Session
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => setIsStartSession(true)}>
+                Start Session
+              </Button>
+              <Button variant="outline" onClick={() => setIdealPosture(null)}>
+                Reset Ideal Posture
+              </Button>
+            </>
+          )}
+        </div>
+      ) : (
+        <Button className="w-fit" onClick={onSave}>
+          Save Ideal Posture
+        </Button>
+      )}
+    </div>
   );
 };
 
