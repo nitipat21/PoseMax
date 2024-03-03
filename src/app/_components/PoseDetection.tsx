@@ -347,6 +347,7 @@ const PoseDetection = () => {
                       Set Notification Delay (in seconds)
                     </Label>
                     <Input
+                      className="bg-white"
                       type="number"
                       id="duration"
                       step={1}
