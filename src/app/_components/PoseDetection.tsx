@@ -292,7 +292,7 @@ const PoseDetection = () => {
       </div>
       <div
         className={cn(
-          "flex flex-col gap-6 items-center max-w-[40rem]",
+          "flex flex-col items-center gap-6 max-w-[40rem]",
           loading && "hidden"
         )}
       >
@@ -339,7 +339,7 @@ const PoseDetection = () => {
                   End Session
                 </Button>
               ) : (
-                <div className="flex items-end gap-4 justify-center">
+                <div className="flex w-full sm:items-end flex-col sm:flex-row gap-4">
                   <div>
                     <Label htmlFor="duration" className="text-xs">
                       Set Notification Delay (in seconds)
@@ -355,23 +355,25 @@ const PoseDetection = () => {
                       }
                     />
                   </div>
-                  <Button
-                    onClick={() => {
-                      setScreenshots([]);
-                      setIsStartSession(true);
-                    }}
-                  >
-                    Start Session
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setScreenshots([]);
-                      setIdealPosture(null);
-                    }}
-                  >
-                    Reset Ideal Posture
-                  </Button>
+                  <div className="space-x-4">
+                    <Button
+                      onClick={() => {
+                        setScreenshots([]);
+                        setIsStartSession(true);
+                      }}
+                    >
+                      Start Session
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setScreenshots([]);
+                        setIdealPosture(null);
+                      }}
+                    >
+                      Reset Ideal Posture
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
