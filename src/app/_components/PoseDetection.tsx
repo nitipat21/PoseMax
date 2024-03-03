@@ -1,6 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import {
@@ -19,7 +22,6 @@ const PoseDetection = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 640, height: 480 });
-  const [postureStatus, setPostureStatus] = useState("");
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const [detector, setDetector] = useState<PoseDetector | null>(null);
   const [idealPosture, setIdealPosture] = useState<Pose | null>(null);
@@ -27,6 +29,9 @@ const PoseDetection = () => {
   const [badPostureTimeoutId, setBadPostureTimeoutId] =
     useState<NodeJS.Timeout | null>(null);
   const [isStartSession, setIsStartSession] = useState(false);
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [duration, setDuration] = useState(5);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const onSave = async () => {
     if (!detector || !video) return;
@@ -50,15 +55,39 @@ const PoseDetection = () => {
 
   // notification
   useEffect(() => {
+    if (!isStartSession) return;
+
     if (isBadPosture && !badPostureTimeoutId) {
       const timeoutId = setTimeout(() => {
         if ("Notification" in window && Notification.permission === "granted") {
           new Notification("Adjust Your Posture", {
             body: "You've been in a bad posture for a while. Time to straighten up!",
           });
+
+          if (videoRef.current) {
+            const canvas = document.createElement("canvas");
+            canvas.width = 240;
+            canvas.height = 240;
+
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(
+                videoRef.current,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+              );
+            }
+
+            const dataURL = canvas.toDataURL("image/png");
+
+            setScreenshots((prev) => [...prev, dataURL]);
+          }
+
           setBadPostureTimeoutId(null);
         }
-      }, 10000);
+      }, duration * 1000);
 
       setBadPostureTimeoutId(timeoutId);
     } else if (!isBadPosture && badPostureTimeoutId) {
@@ -71,7 +100,7 @@ const PoseDetection = () => {
         clearTimeout(badPostureTimeoutId);
       }
     };
-  }, [isBadPosture, badPostureTimeoutId]);
+  }, [isBadPosture, badPostureTimeoutId, isStartSession, duration]);
 
   // init camera and load model
   useEffect(() => {
@@ -243,6 +272,7 @@ const PoseDetection = () => {
     run();
   }, [detector, idealPosture, video]);
 
+  // resize screen
   useLayoutEffect(() => {
     const updateDimensions = debounce(() => {
       const width = window.innerWidth;
@@ -301,33 +331,102 @@ const PoseDetection = () => {
             height={dimensions.height}
           />
         </div>
-        {idealPosture ? (
-          <div className="flex gap-4">
-            {isStartSession ? (
-              <Button onClick={() => setIsStartSession(false)} size="lg">
-                End Session
-              </Button>
-            ) : (
-              <>
-                <Button size="lg" onClick={() => setIsStartSession(true)}>
-                  Start Session
+        <div>
+          {idealPosture ? (
+            <div className="flex gap-4">
+              {isStartSession ? (
+                <Button onClick={() => setIsStartSession(false)}>
+                  End Session
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => setIdealPosture(null)}
-                >
-                  Reset Ideal Posture
-                </Button>
-              </>
-            )}
-          </div>
-        ) : (
-          <Button size="lg" className="w-fit" onClick={onSave}>
-            Save Ideal Posture
-          </Button>
-        )}
+              ) : (
+                <div className="flex items-end gap-4 justify-center">
+                  <div>
+                    <Label htmlFor="duration" className="text-xs">
+                      Set Notification Delay (in seconds)
+                    </Label>
+                    <Input
+                      type="number"
+                      id="duration"
+                      step={1}
+                      value={duration}
+                      min={1}
+                      onChange={(e) =>
+                        setDuration(parseInt(e.currentTarget.value))
+                      }
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setScreenshots([]);
+                      setIsStartSession(true);
+                    }}
+                  >
+                    Start Session
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setScreenshots([]);
+                      setIdealPosture(null);
+                    }}
+                  >
+                    Reset Ideal Posture
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button className="w-fit" onClick={onSave}>
+              Save Ideal Posture
+            </Button>
+          )}
+        </div>
       </div>
+      {screenshots.length > 0 && (
+        <div className="mt-16 space-y-6">
+          <div>
+            <h3 className="scroll-m-20 text-center text-2xl font-semibold tracking-tight">
+              Recap Your Bad Posture
+            </h3>
+          </div>
+          <div className="flex items-start overflow-x-scroll  max-w-7xl shadow-inner border-2 border-black rounded-xl">
+            {screenshots.map((screenshot, index) => (
+              <Dialog key={`Screenshot ${index + 1}`}>
+                <DialogTrigger
+                  className={cn(
+                    "shrink-0 border-r border-black hover:opacity-80 transition-opacity"
+                  )}
+                >
+                  <div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={screenshot}
+                      className="scale-x-[-1]"
+                      alt={`Screenshot ${index + 1}`}
+                      onClick={() => setSelectedImage(screenshot)}
+                    />
+                  </div>
+                </DialogTrigger>
+                <DialogContent>
+                  <div
+                    className="selected-image-container"
+                    style={{ textAlign: "center", marginTop: "20px" }}
+                  >
+                    {selectedImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={selectedImage}
+                        alt="Selected Screenshot"
+                        className="w-full h-full object-cover rounded-2xl scale-x-[-1]"
+                      />
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 };

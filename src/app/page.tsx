@@ -9,7 +9,7 @@ export default function Home() {
         </h1>
       </div>
 
-      <div>
+      <div className="flex items-center flex-col">
         <PoseDetection />
       </div>
     </main>
