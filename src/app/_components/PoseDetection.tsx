@@ -17,6 +17,7 @@ import * as tf from "@tensorflow/tfjs";
 import "@tensorflow/tfjs-backend-webgl";
 import debounce from "lodash/debounce";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import Icon from "./../../../public/icon.webp";
 
 const PoseDetection = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -60,8 +61,9 @@ const PoseDetection = () => {
     if (isBadPosture && !badPostureTimeoutId) {
       const timeoutId = setTimeout(() => {
         if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("Adjust Your Posture", {
+          new Notification("PoseMax: Adjust Your Posture", {
             body: "You've been in a bad posture for a while. Time to straighten up!",
+            icon: Icon.src,
           });
 
           if (videoRef.current) {
